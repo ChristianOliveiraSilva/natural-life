@@ -11,10 +11,11 @@
 *   Copyright (c) 2014-2020 Ramon Santamaria (@raysan5)
 *
 ********************************************************************************************/
-
+#include <math.h>
 #include "raylib.h"
 
 #define MAX_MOBS 20
+#define MAX_GRASS 10
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
 //----------------------------------------------------------------------------------
@@ -27,10 +28,23 @@ typedef struct
     Vector3 nextPosition;
     Color color;
     int food;
+    int life;
     float speed;
 } Mob;
-  
-  
+
+typedef struct
+{
+    int show;
+    Vector3 position;
+} Grass;
+
+float calculateDistance(float x1, float z1, float x2, float z2)  {
+    float x = x2 - x1;
+    float z = z2 - z1;
+    
+    return sqrt(pow(x, 2) + pow(z, 2));
+}
+
 //----------------------------------------------------------------------------------
 // Main entry point
 //----------------------------------------------------------------------------------
@@ -56,23 +70,31 @@ int main(void)
     camera.type = CAMERA_PERSPECTIVE;
     
     // mobs vars
-    Mob mobs[MAX_MOBS];
+    Grass scrub[MAX_MOBS]; 
+    Mob mobs[MAX_MOBS];   
+    int range = 50;
 
+    for (int i = 0; i < MAX_GRASS; i++)
+    {
+        scrub[i].show = 1;
+        scrub[i].position = (Vector3){ GetRandomValue(-range, range), 1.0f, GetRandomValue(-range, range) };
+    }
+ 
     for (int i = 0; i < MAX_MOBS; i++)
     {
-        int range = 50;
         mobs[i].position = (Vector3){ GetRandomValue(-range, range), 1.0f, GetRandomValue(-range, range) };
-        range *= 2;
         mobs[i].nextPosition = (Vector3){ GetRandomValue(-range, range), 1.0f, GetRandomValue(-range, range) };
         mobs[i].food = 100;
-        mobs[i].speed = 0.1f;
+        mobs[i].life = 100;
         
-        if (GetRandomValue(0, 1) == 1) {
+        if (i % 2 != 0) { // lobo
             mobs[i].type = 1;
             mobs[i].color = (Color){ 255, 153, 51, 255 };
-        } else {
+            mobs[i].speed = 0.014f;
+        } else { // ovelha
             mobs[i].type = 0;
             mobs[i].color = (Color){ 255, 255, 255, 255 };
+            mobs[i].speed = 0.01f;
         }
     }
     
@@ -87,11 +109,13 @@ int main(void)
     {
         // Update
         //----------------------------------------------------------------------------------
+        
+        framesCounter = framesCounter >= 24000 ? 0 : framesCounter+1;
+        
         switch(currentScreen) 
         {
             case LOGO: 
             {
-                framesCounter++;
                 
                 if (framesCounter > 600)
                 {
@@ -120,27 +144,25 @@ int main(void)
                 }
 
                 for (int i = 0; i < MAX_MOBS; i++)
-                {
-                    int needNextPosition = 0;
-                    
+                {                    
                     if(mobs[i].position.x < mobs[i].nextPosition.x) {
                         mobs[i].position.x += mobs[i].speed;
                     } if(mobs[i].position.x > mobs[i].nextPosition.x) {
                         mobs[i].position.x -= mobs[i].speed;
-                    } else {
-                        needNextPosition++;
                     }
                     
                     if(mobs[i].position.z < mobs[i].nextPosition.z) {
                         mobs[i].position.z += mobs[i].speed;
                     } if(mobs[i].position.z > mobs[i].nextPosition.z) {
                         mobs[i].position.z -= mobs[i].speed;
-                    } else {
-                        needNextPosition++;
                     }
                     
-                    if (needNextPosition == 2) {
+                    if (calculateDistance(mobs[i].position.x, mobs[i].position.z, mobs[i].nextPosition.x, mobs[i].nextPosition.z) < 1) {
                         mobs[i].nextPosition = (Vector3){ GetRandomValue(-100, 100), 1.0f, GetRandomValue(-100, 100) };
+                    }
+                    
+                    if(framesCounter % 1000 == 0) {
+                        mobs[i].food = mobs[i].food < 0 ? 0 : mobs[i].food-1;
                     }
                 }
                 
@@ -150,7 +172,7 @@ int main(void)
                 if (IsKeyPressed(KEY_ENTER) || IsGestureDetected(GESTURE_TAP))
                 {
                     CloseWindow();
-                }  
+                }
             } break;
             default: break;
         }
@@ -160,7 +182,7 @@ int main(void)
         //----------------------------------------------------------------------------------
         BeginDrawing();
         
-            ClearBackground(RAYWHITE);
+            ClearBackground(SKYBLUE);
             
             switch(currentScreen) 
             {
@@ -169,7 +191,6 @@ int main(void)
                     DrawRectangle(0, 0, screenWidth, screenHeight, BLACK);
                     DrawText("Carregando a simulação", 20, 20, 40, LIGHTGRAY);
                     DrawText("Espere um pouco...", 290, 220, 20, GRAY);
-                    
                 } break;
                 case TITLE: 
                 {
@@ -184,12 +205,19 @@ int main(void)
                     
                     BeginMode3D(camera);
 
-                    DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 10000.0f, 10000.0f }, DARKGREEN); // Draw ground
+                    DrawPlane((Vector3){ camera.position.x, 0, camera.position.z }, (Vector2){ 10000.0f, 10000.0f }, DARKGREEN);
 
-                    // Draw some cubes around
+                    for (int i = 0; i < MAX_GRASS; i++)
+                    {
+                        if (scrub[i].show == 1) {
+                            float tall = i % 3 == 0 ? 1.0f : 0.7f;
+                            DrawCube(scrub[i].position, 0.2f, tall, 0.2f, GREEN);
+                        }
+                    }
+
                     for (int i = 0; i < MAX_MOBS; i++)
                     {
-                        DrawCube(mobs[i].position, 1.0f, 1.0f, 2.0f, mobs[i].color);
+                        DrawCube(mobs[i].position, 0.8f, 0.8f, 1.6f, mobs[i].color);
                     }
 
                     EndMode3D();
