@@ -1,24 +1,9 @@
-/*******************************************************************************************
-*
-*   raylib - Simple Game template
-*
-*   <Game title>
-*   <Game description>
-*
-*   This game has been created using raylib (www.raylib.com)
-*   raylib is licensed under an unmodified zlib/libpng license (View raylib.h for details)
-*
-*   Copyright (c) 2014-2020 Ramon Santamaria (@raysan5)
-*
-********************************************************************************************/
 #include <math.h>
 #include "raylib.h"
 
 #define MAX_MOBS 20
 #define MAX_GRASS 10
-//----------------------------------------------------------------------------------
-// Types and Structures Definition
-//----------------------------------------------------------------------------------
+
 typedef enum GameScreen { LOGO = 0, TITLE, GAMEPLAY, ENDING } GameScreen;
 
 typedef struct
@@ -50,24 +35,21 @@ float calculateDistance(float x1, float z1, float x2, float z2)  {
 //----------------------------------------------------------------------------------
 int main(void)
 {
-    // Initialization (Note windowTitle is unused on Android)
-    //--------------------------------------------------------------------------------------
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    const int screenWidth = 1200;
+    const int screenHeight = 750;
 
     InitWindow(screenWidth, screenHeight, "Natural Life");
 
     GameScreen currentScreen = GAMEPLAY;
+    DisableCursor();
 
-    // TODO: Initialize all required variables and load all required data here!
-
-    int framesCounter = 0;          // Useful to count frames
+    int framesCounter = 0;
     Camera camera = { 0 };
     camera.position = (Vector3){ 4.0f, 2.0f, 4.0f };
     camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
     camera.fovy = 60.0f;
-    camera.type = CAMERA_PERSPECTIVE;
+    camera.projection = CAMERA_PERSPECTIVE;
     
     // mobs vars
     Grass scrub[MAX_MOBS]; 
@@ -98,9 +80,6 @@ int main(void)
         }
     }
     
-    int wasSetCameraMode = 0;
-
-    SetCameraMode(camera, CAMERA_FIRST_PERSON);
     SetTargetFPS(60); // Set desired framerate (frames-per-second)
     //--------------------------------------------------------------------------------------
     
@@ -116,10 +95,10 @@ int main(void)
         {
             case LOGO: 
             {
-                
                 if (framesCounter > 600)
                 {
                     currentScreen = TITLE;
+                    DisableCursor();
                 }
             } break;
             case TITLE: 
@@ -130,16 +109,9 @@ int main(void)
                 }
             } break;
             case GAMEPLAY:
-            {
-                if (wasSetCameraMode == 0 && IsKeyPressed(KEY_ENTER))
-                {
-                    //SetCameraMode(camera, CAMERA_FIRST_PERSON);
-                    wasSetCameraMode = 1;
-                }
-                
+            {                
                 if (IsKeyPressed(KEY_E))
                 {
-                    SetCameraMode(camera, CAMERA_FREE);
                     currentScreen = ENDING;
                 }
 
@@ -159,10 +131,6 @@ int main(void)
                     
                     if (calculateDistance(mobs[i].position.x, mobs[i].position.z, mobs[i].nextPosition.x, mobs[i].nextPosition.z) < 1) {
                         mobs[i].nextPosition = (Vector3){ GetRandomValue(-100, 100), 1.0f, GetRandomValue(-100, 100) };
-                    }
-                    
-                    if(framesCounter % 1000 == 0) {
-                        mobs[i].food = mobs[i].food < 0 ? 0 : mobs[i].food-1;
                     }
                 }
                 
@@ -201,7 +169,7 @@ int main(void)
                 } break;
                 case GAMEPLAY:
                 {
-                    UpdateCamera(&camera);
+                    UpdateCamera(&camera, CAMERA_FIRST_PERSON);
                     
                     BeginMode3D(camera);
 
@@ -222,6 +190,7 @@ int main(void)
 
                     EndMode3D();
                     
+                    DrawText("PRESSIONE E para finalizar a simulação", screenWidth * 0.65, screenHeight - 25, 20, DARKBLUE);
                 } break;
                 case ENDING: 
                 {
